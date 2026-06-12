@@ -25,7 +25,7 @@ O arquivo tem três blocos, na ordem:
 
 1. **`<style>`** (a partir da linha ~32): todo o CSS. Paleta definida em variáveis CSS no `:root` (`--wine`, `--gold`, `--cream`, etc.). Estética "editorial/bodas": fontes Cormorant Garamond + Jost via Google Fonts, textura de grão via SVG inline em `body::before`.
 2. **`<body>`** (a partir da ~245): o `<canvas id="fogos">` (overlay dos fogos) e as seções semânticas em ordem de scroll — `hero` → `intro` (contador) → `timeline` → `gallery` (carrossel) → `quote` → `footer`.
-3. **`<script>`** (a partir da ~360): cinco blocos independentes, na ordem — contador de tempo, nº de anos dinâmico (título + textos), `IntersectionObserver` de reveal, carrossel e fogos de artifício.
+3. **`<script>`** (a partir da ~360): cinco blocos independentes, na ordem — contador de tempo, nº de anos dinâmico (título + textos), `IntersectionObserver` de reveal, carrossel e animações comemorativas.
 
 ### Comportamentos JS
 
@@ -33,7 +33,7 @@ O arquivo tem três blocos, na ordem:
 - **Nº de anos dinâmico** (linha ~411): calcula `anos = anoAtual - DATA_INICIO.getFullYear()` e injeta o resultado em `document.title` (`"N Anos · Nossa História"`), no rodapé (`#f-ano`) e nos textos por extenso. É a razão de o título/textos não serem hardcoded.
 - **Reveal no scroll**: elementos com a classe `.reveal` ganham `.in` ao entrar na viewport (`IntersectionObserver`).
 - **Carrossel** (`#track`/`#carousel`): autoplay de 5s, pausa no `mouseenter`, navegação por setas e bolinhas geradas dinamicamente, e swipe por toque no mobile. As bolinhas (`#dots`) são criadas a partir do número de `.slide`.
-- **Fogos de artifício** (`DATAS_ESPECIAIS`, linha ~493): só dispara o overlay `<canvas id="fogos">` quando a data de hoje (`"mês-dia"`, **mês base 1**) está na lista `DATAS_ESPECIAIS`, e respeita `prefers-reduced-motion`. Animação via `requestAnimationFrame` (~4,5s de foguetes + faíscas, paleta dourado/vinho do site); ao terminar, o canvas faz fade e se auto-remove. Para mudar quando os fogos aparecem, edite o array `DATAS_ESPECIAIS`.
+- **Animações comemorativas** (`TEMAS_POR_DATA`, linha ~493): engine multi-tema sobre o overlay `<canvas id="fogos">`. O mapa `TEMAS_POR_DATA` liga cada data (`"mês-dia"`, **mês base 1** — diferente do contador, que usa base 0) a um tema: `fogos` (Dia dos Namorados, 14/fev e 12/jun), `petalas` (casamento, 17/abr), `coracoes` (primeiro beijo, 24/ago) e `baloes` (aniversários, 13/jun e 27/set). Cada tema é um objeto em `TEMAS` com `cores`, `duracao` e as funções `spawn`/`passo`/`desenha` sobre um array único de partículas; o `frame()` é genérico (só `fogos` usa rastro aditivo via `trilha()`, os demais limpam o quadro). Ao fim, o canvas faz fade e se auto-remove. (Obs.: a trava de `prefers-reduced-motion` foi removida de propósito — por ser um site pessoal, as animações tocam nas datas independentemente da config do sistema.) **Para testar em qualquer dia:** edite a constante `TEMA_TESTE` no topo da IIFE (ex.: `'baloes'`) ou use a querystring `?fx=<tema>` — deixe `TEMA_TESTE = ''` para voltar a respeitar a data real.
 
 ## Como personalizar
 
