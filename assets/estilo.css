@@ -196,6 +196,40 @@
   footer .date{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,5vw,3rem);color:var(--cream);margin:.8rem 0;}
   footer small{font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;opacity:.6;}
 
+  /* ---------- link flutuante "mensagem do dia" (datas especiais) ---------- */
+  .msg-flutua{
+    position:fixed;right:clamp(1.2rem,4vw,2.4rem);bottom:clamp(1.2rem,4vw,2.4rem);
+    transform:translateY(28px) scale(.96);
+    z-index:10000;                 /* acima do canvas e do grão */
+    display:inline-flex;flex-direction:column;align-items:flex-start;gap:.5rem;
+    max-width:min(86vw,340px);
+    padding:1.2rem 1.6rem;
+    text-decoration:none;text-align:left;
+    color:var(--cream);
+    background:rgba(61,16,25,.62);
+    border:1px solid var(--gold-soft);
+    border-radius:3px;
+    backdrop-filter:blur(6px);
+    box-shadow:0 24px 50px -20px rgba(0,0,0,.75),0 0 34px rgba(176,141,87,.22);
+    opacity:0;pointer-events:none;
+    transition:opacity 1s ease,transform 1.1s cubic-bezier(.16,1,.3,1);
+  }
+  .msg-flutua.on{opacity:1;pointer-events:auto;transform:translateY(0) scale(1);}
+  .msg-flutua.off{opacity:0;pointer-events:none;transform:translateY(16px) scale(.98);}
+  .msg-flutua__txt{
+    font-family:'Cormorant Garamond',serif;font-style:italic;
+    font-size:clamp(1.2rem,3vw,1.7rem);line-height:1.25;color:var(--cream);
+    transition:color .3s;
+  }
+  .msg-flutua__seta{
+    align-self:flex-end;
+    font-size:.8rem;letter-spacing:.4em;color:var(--gold-soft);
+    animation:msgPulsa 2.4s ease-in-out infinite;
+  }
+  .msg-flutua:hover .msg-flutua__txt{color:var(--gold-soft);}
+  .msg-flutua:focus-visible{outline:2px solid var(--gold-soft);outline-offset:4px;}
+  @keyframes msgPulsa{0%,100%{opacity:.5;transform:translateX(0);}50%{opacity:1;transform:translateX(3px);}}
+
   /* reveal on scroll */
   .reveal{opacity:0;transform:translateY(34px);transition:opacity 1s ease,transform 1s ease;}
   .reveal.in{opacity:1;transform:none;}

@@ -397,3 +397,46 @@
 
     requestAnimationFrame(frame);
   })();
+
+  /* ===== link "mensagem do dia" (surge sobre a tela e desvanece nas datas especiais) ===== */
+  (function(){
+    // EDITE AQUI p/ testar em qualquer dia: '' usa a data real; ou force um dia "mês-dia" (base 1):
+    //   '2-14' | '6-12' | '4-17' | '8-24' | '6-13' | '9-27'
+    const MSG_TESTE = '';
+
+    // data → { arquivo da mensagem, texto do link }  (formato "mês-dia", mês base 1 — igual às animações)
+    const MENSAGENS_POR_DATA = {
+      '2-14': { arquivo:'mensagens/namorados-fev.html',       chamada:'Há algo para você hoje' },      // 14/fev · Dia dos Namorados
+      '6-12': { arquivo:'mensagens/namorados-jun.html',       chamada:'Há algo para você hoje' },      // 12/jun · Dia dos Namorados
+      '4-17': { arquivo:'mensagens/casamento.html',           chamada:'Uma carta para o nosso dia' },  // 17/abr · casamento
+      '8-24': { arquivo:'mensagens/primeiro-beijo.html',      chamada:'Lembra deste dia?' },           // 24/ago · primeiro beijo
+      '6-13': { arquivo:'mensagens/aniversario-cleide.html',  chamada:'Uma mensagem para você, Cleide' },  // 13/jun · aniversário da Cleide
+      '9-27': { arquivo:'mensagens/aniversario-patrick.html', chamada:'Uma mensagem para você, Patrick' }, // 27/set · aniversário do Patrick
+    };
+
+    const hoje = new Date();
+    const chaveHoje = (hoje.getMonth() + 1) + '-' + hoje.getDate();
+    // override por URL (?msg=mês-dia) — preview sem editar o arquivo
+    const msgUrl = new URLSearchParams(location.search).get('msg');
+    const chave = MSG_TESTE || msgUrl || chaveHoje;
+    const dados = MENSAGENS_POR_DATA[chave];
+    if(!dados) return;                 // fora das datas → nenhum link aparece
+
+    // cria o link flutuante, centralizado sobre o canvas das animações
+    const a = document.createElement('a');
+    a.href = dados.arquivo;
+    a.className = 'msg-flutua';
+    a.setAttribute('aria-label', dados.chamada);
+    a.innerHTML = '<span class="msg-flutua__txt">' + dados.chamada + '</span>'
+                + '<span class="msg-flutua__seta" aria-hidden="true">&#10022;</span>';
+    document.body.appendChild(a);
+
+    // ciclo: fade-in (~1s) → ~6s visível → fade-out e auto-remoção (some até recarregar)
+    const VISIVEL = 6000;
+    requestAnimationFrame(() => a.classList.add('on'));
+    setTimeout(() => {
+      a.classList.remove('on');
+      a.classList.add('off');
+      a.addEventListener('transitionend', () => a.remove(), { once:true });
+    }, 1000 + VISIVEL);
+  })();
