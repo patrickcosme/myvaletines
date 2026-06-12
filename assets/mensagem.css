@@ -1,0 +1,79 @@
+  /* ============================================================
+     Estilo compartilhado das páginas de mensagem (mensagens/*.html)
+     Mesma paleta e fontes do site — estética editorial vinho/dourado.
+     ============================================================ */
+  :root{
+    --cream:#F4EDE2;
+    --ivory:#FBF7F0;
+    --wine:#5A1A29;
+    --wine-deep:#3D1019;
+    --gold:#B08D57;
+    --gold-soft:#C9A876;
+    --ink:#2A211C;
+    --blush:#E7D4C4;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+
+  body{
+    font-family:'Jost',sans-serif;
+    background:var(--wine-deep);
+    color:var(--cream);
+    line-height:1.8;
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:clamp(2rem,6vw,5rem) 1.5rem;
+    overflow-x:hidden;
+  }
+
+  /* grão sutil sobre tudo (igual ao index) */
+  body::before{
+    content:"";
+    position:fixed;inset:0;
+    pointer-events:none;z-index:9999;
+    opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .carta{
+    position:relative;z-index:1;
+    max-width:680px;width:100%;
+    text-align:center;
+    background:rgba(244,237,226,.04);
+    border:1px solid rgba(201,168,118,.35);
+    padding:clamp(2.5rem,7vw,5rem) clamp(1.6rem,5vw,3.6rem);
+    box-shadow:0 40px 80px -40px rgba(0,0,0,.6);
+    animation:cartaSobe 1.2s ease both;
+  }
+  @keyframes cartaSobe{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:none;}}
+
+  .carta__eyebrow{
+    font-size:.72rem;letter-spacing:.45em;text-transform:uppercase;
+    color:var(--gold-soft);margin-bottom:1.4rem;
+  }
+  .carta__titulo{
+    font-family:'Cormorant Garamond',serif;font-weight:400;
+    font-size:clamp(2.2rem,6vw,3.6rem);line-height:1.15;color:var(--cream);
+  }
+  .carta__titulo em{font-style:italic;color:var(--gold-soft);}
+  .carta__linha{width:60px;height:1px;background:var(--gold);margin:1.8rem auto;}
+  .carta__corpo{
+    font-family:'Cormorant Garamond',serif;
+    font-size:clamp(1.2rem,2.6vw,1.6rem);font-style:italic;
+    line-height:1.7;color:var(--blush);
+  }
+  .carta__corpo p{margin-bottom:1.3rem;}
+  .carta__corpo p:last-child{margin-bottom:0;}
+  .carta__data{
+    margin-top:2.2rem;
+    font-size:.75rem;letter-spacing:.35em;text-transform:uppercase;color:var(--gold);
+  }
+  .carta__voltar{
+    display:inline-block;margin-top:2.6rem;
+    font-size:.72rem;letter-spacing:.3em;text-transform:uppercase;
+    color:var(--cream);text-decoration:none;
+    border:1px solid var(--gold-soft);border-radius:2px;
+    padding:.8rem 1.8rem;transition:background .3s,color .3s;
+  }
+  .carta__voltar:hover{background:var(--gold-soft);color:var(--wine-deep);}
