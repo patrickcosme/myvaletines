@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Convenções de commit
+
+**NUNCA** adicione qualquer referência ao Claude / Anthropic em commits. Sem linha `Co-Authored-By: Claude ...`, sem `🤖 Generated with Claude Code`, sem menção ao assistente na mensagem ou no corpo do commit. As mensagens devem conter apenas a descrição da mudança.
+
 ## O que é este projeto
 
 Página única estática — um site comemorativo de aniversário de casamento ("23 Anos · Nossa História") para o casal Patrick & Cleide. Todo o site vive em um único arquivo: `index.html` (~617 KB, mas só ~412 linhas de código real). O tamanho vem das **fotos embutidas como base64** (`data:image/jpeg;base64,...`) diretamente no HTML — não há pasta de assets nem arquivos de imagem externos no repositório.
