@@ -406,6 +406,9 @@
     document.getElementById('f-anos').textContent = anos;
     document.getElementById('f-ano').textContent  = anoAtual;
 
+    // título da aba: "23 Anos · Nossa História"
+    document.title = anos + ' Anos · Nossa História';
+
     // converte 0–99 em palavras (PT-BR), 1ª letra maiúscula
     function porExtenso(n){
       const u = ['zero','um','dois','três','quatro','cinco','seis','sete','oito','nove'];
