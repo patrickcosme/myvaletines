@@ -64,7 +64,7 @@
 
   .serif{font-family:'Cormorant Garamond',serif;}
 
-  /* fogos de artifício (overlay ao abrir a página) */
+  /* overlay das animações comemorativas (fogos, pétalas, corações, balões) */
   #fogos{
     position:fixed;inset:0;
     z-index:9998;pointer-events:none;
@@ -245,7 +245,7 @@
 </head>
 <body>
 
-  <!-- fogos de artifício disparados ao abrir a página -->
+  <!-- overlay das animações comemorativas (varia conforme a data) -->
   <canvas id="fogos" aria-hidden="true"></canvas>
 
   <!-- ===================== HERO ===================== -->
@@ -487,23 +487,32 @@
     });
   })();
 
-  /* ===== fogos de artifício (só em datas comemorativas, dourado & vinho, ~4,5s) ===== */
+  /* ===== animações comemorativas (overlay #fogos; uma animação por data) ===== */
   (function(){
-    // datas em que os fogos disparam — formato "mês-dia" (mês base 1)
-    const DATAS_ESPECIAIS = [
-      '2-14',  // 14/fev · Dia dos Namorados (Valentine's)
-      '4-17',  // 17/abr · aniversário de casamento
-      '6-12',  // 12/jun · Dia dos Namorados
-      '6-13',  // 13/jun · aniversário da Cleide
-      '8-24',  // 24/ago · primeiro beijo
-      '9-27',  // 27/set · aniversário do Patrick
-    ];
+    // EDITE AQUI p/ testar: '' usa a data real; ou force um tema p/ ver em qualquer dia:
+    //   'fogos' | 'petalas' | 'coracoes' | 'baloes'
+    const TEMA_TESTE = '';
+
+    // data → tema (formato "mês-dia", mês base 1)
+    const TEMAS_POR_DATA = {
+      '2-14': 'fogos',     // 14/fev · Dia dos Namorados (Valentine's)
+      '6-12': 'fogos',     // 12/jun · Dia dos Namorados
+      '4-17': 'petalas',   // 17/abr · aniversário de casamento
+      '8-24': 'coracoes',  // 24/ago · primeiro beijo
+      '6-13': 'baloes',    // 13/jun · aniversário da Cleide
+      '9-27': 'baloes',    // 27/set · aniversário do Patrick
+    };
+
     const hoje = new Date();
     const chaveHoje = (hoje.getMonth() + 1) + '-' + hoje.getDate();
-    if(!DATAS_ESPECIAIS.includes(chaveHoje)) return; // fora das datas, nada de fogos
+    // override por URL (?fx=tema) — atalho de preview sem editar o arquivo
+    const fx = new URLSearchParams(location.search).get('fx');
+    const forcado = TEMA_TESTE || fx;                 // tema forçado p/ teste/preview
+    const temaId = forcado || TEMAS_POR_DATA[chaveHoje];
 
-    // respeita quem prefere menos animação
-    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // respeita quem prefere menos animação — mas o override de teste sempre roda
+    const reduzMov = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduzMov && !forcado) return;
 
     const canvas = document.getElementById('fogos');
     if(!canvas) return;
@@ -520,100 +529,225 @@
     resize();
     addEventListener('resize', resize);
 
-    // paleta do site: dourado, dourado-suave, creme/blush + um toque de vinho
-    const CORES = ['#B08D57','#C9A876','#E7D4C4','#D9B26A','#9c3a4d'];
-    const rand = (a,b) => a + Math.random()*(b-a);
-    const cor  = () => CORES[Math.floor(Math.random()*CORES.length)];
+    const rand     = (a,b) => a + Math.random()*(b-a);
+    const escolher = arr   => arr[Math.floor(Math.random()*arr.length)];
 
-    const foguetes  = [];
-    const faiscas   = [];
-    const GRAV = 0.05 * dpr;
+    // array único de partículas + API entregue a cada tema (W/H/dpr sempre atuais)
+    const parts = [];
+    const api = {
+      ctx, rand, parts,
+      get W(){ return W; }, get H(){ return H; }, get dpr(){ return dpr; },
+      add: p => parts.push(p),
+    };
 
-    function lancar(){
-      foguetes.push({
-        x: rand(W*0.18, W*0.82),
-        y: H + 10,
-        vy: rand(-13, -10) * dpr,
-        alvo: rand(H*0.12, H*0.45),
-        cor: cor(),
-      });
-    }
+    // =================== TEMAS ===================
+    const TEMAS = {
+      // -------- fogos de artifício (vinho/rosa/dourado, com rastro aditivo) --------
+      fogos: {
+        cores: ['#9c3a4d','#C9A876','#E7D4C4','#D9B26A','#5A1A29'],
+        duracao: 4500,
+        trilha(ctx, W, H){               // apaga o quadro só um pouco → rastro
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.fillStyle = 'rgba(0,0,0,0.20)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.globalCompositeOperation = 'lighter';
+        },
+        init(api){ this.lancar(api); this.lancar(api); },
+        cadencia(){ return rand(280, 520); },
+        spawn(api){ this.lancar(api); if(Math.random() < 0.5) this.lancar(api); },
+        lancar(api){
+          api.add({ tipo:'foguete',
+            x: rand(api.W*0.18, api.W*0.82), y: api.H + 10,
+            vy: rand(-13, -10) * api.dpr, alvo: rand(api.H*0.12, api.H*0.45), cor: api.cor() });
+        },
+        explodir(api, x, y, base){
+          const n = Math.floor(rand(50, 80));
+          for(let i=0; i<n; i++){
+            const ang = (Math.PI*2) * (i/n) + rand(-0.04, 0.04);
+            const sp  = rand(1.5, 6) * api.dpr;
+            api.add({ tipo:'faisca', x, y,
+              vx: Math.cos(ang)*sp, vy: Math.sin(ang)*sp,
+              cor: Math.random() < 0.72 ? base : api.cor(),
+              vida: 1, decay: rand(0.010, 0.020), r: rand(1.3, 2.8) * api.dpr });
+          }
+        },
+        passo(p, api){
+          const G = 0.05 * api.dpr;
+          if(p.tipo === 'foguete'){
+            p.y += p.vy; p.vy += G;
+            if(p.vy >= 0 || p.y <= p.alvo){ this.explodir(api, p.x, p.y, p.cor); return false; }
+          } else {
+            p.x += p.vx; p.y += p.vy;
+            p.vx *= 0.985; p.vy = p.vy*0.985 + G;
+            p.vida -= p.decay;
+            if(p.vida <= 0) return false;
+          }
+        },
+        desenha(p, api){
+          const ctx = api.ctx;
+          if(p.tipo === 'foguete'){
+            ctx.globalAlpha = 1; ctx.fillStyle = p.cor;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 2.2*api.dpr, 0, Math.PI*2); ctx.fill();
+          } else {
+            ctx.globalAlpha = Math.max(p.vida, 0); ctx.fillStyle = p.cor;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+          }
+        },
+      },
 
-    function explodir(x, y, base){
-      const n = Math.floor(rand(50, 80));
-      for(let i=0; i<n; i++){
-        const ang = (Math.PI*2) * (i/n) + rand(-0.04, 0.04);
-        const sp  = rand(1.5, 6) * dpr;
-        faiscas.push({
-          x, y,
-          vx: Math.cos(ang)*sp,
-          vy: Math.sin(ang)*sp,
-          cor: Math.random() < 0.72 ? base : cor(),
-          vida: 1,
-          decay: rand(0.010, 0.020),
-          r: rand(1.3, 2.8) * dpr,
-        });
-      }
-    }
+      // -------- chuva de pétalas douradas (casamento) --------
+      petalas: {
+        cores: ['#D9B26A','#C9A876','#B08D57','#E7D4C4','#F4EDE2'],
+        duracao: 5000,
+        cadencia(){ return rand(90, 170); },
+        spawn(api){
+          const n = Math.random() < 0.5 ? 2 : 1;
+          for(let i=0; i<n; i++){
+            const s = rand(7, 13) * api.dpr;
+            api.add({
+              x: rand(0, api.W), y: -20*api.dpr,
+              vy: rand(1.8, 3.8) * api.dpr,
+              fase: rand(0, Math.PI*2), freq: rand(0.0010, 0.0022), amp: rand(0.6, 1.6) * api.dpr,
+              rot: rand(0, Math.PI*2), vrot: rand(-0.03, 0.03),
+              rx: s, ry: s*rand(0.45, 0.62),
+              cor: api.cor(), alpha: rand(0.7, 0.95),
+            });
+          }
+        },
+        passo(p, api, t){
+          p.y += p.vy;
+          p.x += Math.sin(t * p.freq + p.fase) * p.amp;
+          p.rot += p.vrot;
+          if(p.y > api.H + 30*api.dpr) return false;
+        },
+        desenha(p, api){
+          const ctx = api.ctx;
+          ctx.save();
+          ctx.globalAlpha = p.alpha;
+          ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+          ctx.fillStyle = p.cor;
+          ctx.beginPath(); ctx.ellipse(0, 0, p.rx, p.ry, 0, 0, Math.PI*2); ctx.fill();
+          ctx.restore();
+        },
+      },
 
-    const DURACAO = 4500;          // quanto tempo segue lançando (ms)
-    let inicio = null, proxLanc = 0, parouEm = null;
+      // -------- corações subindo (primeiro beijo) --------
+      coracoes: {
+        cores: ['#9c3a4d','#5A1A29','#C26B7A','#E7D4C4'],
+        duracao: 6000,
+        cadencia(){ return rand(260, 480); },
+        spawn(api){
+          const s = rand(9, 16) * api.dpr;
+          api.add({
+            x: rand(api.W*0.08, api.W*0.92), y: api.H + 20*api.dpr,
+            vy: rand(-1.6, -0.8) * api.dpr,
+            fase: rand(0, Math.PI*2), freq: rand(0.0012, 0.0024), amp: rand(0.5, 1.3) * api.dpr,
+            s, cor: api.cor(), vida: 1, decay: rand(0.0026, 0.0046),
+          });
+        },
+        passo(p, api, t){
+          p.y += p.vy;
+          p.x += Math.sin(t * p.freq + p.fase) * p.amp;
+          p.vida -= p.decay;
+          if(p.vida <= 0 || p.y < -30*api.dpr) return false;
+        },
+        desenha(p, api){
+          const ctx = api.ctx;
+          ctx.save();
+          ctx.globalAlpha = Math.max(p.vida, 0) * 0.92;
+          ctx.translate(p.x, p.y); ctx.scale(p.s/17, p.s/17);
+          ctx.fillStyle = p.cor;
+          // curva paramétrica do coração (canvas: y p/ baixo, por isso o sinal negativo)
+          ctx.beginPath();
+          for(let a=0; a<=Math.PI*2 + 0.01; a+=0.20){
+            const hx =  16*Math.pow(Math.sin(a), 3);
+            const hy = -(13*Math.cos(a) - 5*Math.cos(2*a) - 2*Math.cos(3*a) - Math.cos(4*a));
+            a === 0 ? ctx.moveTo(hx, hy) : ctx.lineTo(hx, hy);
+          }
+          ctx.closePath(); ctx.fill();
+          ctx.restore();
+        },
+      },
+
+      // -------- balões subindo (aniversários) --------
+      baloes: {
+        cores: ['#9c3a4d','#5A1A29','#B08D57','#C9A876','#7A2535'],
+        duracao: 5500,
+        cadencia(){ return rand(420, 760); },
+        spawn(api){
+          const r = rand(13, 22) * api.dpr;
+          api.add({
+            x: rand(api.W*0.1, api.W*0.9), y: api.H + r*3,
+            vy: rand(-2.8, -1.6) * api.dpr,
+            fase: rand(0, Math.PI*2), freq: rand(0.0008, 0.0016), amp: rand(0.6, 1.5) * api.dpr,
+            r, cor: api.cor(), tilt: rand(-0.18, 0.18),
+          });
+        },
+        passo(p, api, t){
+          p.y += p.vy;
+          p.x += Math.sin(t * p.freq + p.fase) * p.amp;
+          if(p.y < -p.r*4) return false;
+        },
+        desenha(p, api){
+          const ctx = api.ctx, r = p.r;
+          ctx.save();
+          ctx.globalAlpha = 0.92;
+          ctx.translate(p.x, p.y); ctx.rotate(p.tilt);
+          // cordão
+          ctx.strokeStyle = 'rgba(180,150,110,0.55)';
+          ctx.lineWidth = Math.max(1, 0.8*api.dpr);
+          ctx.beginPath(); ctx.moveTo(0, r*1.15); ctx.quadraticCurveTo(r*0.25, r*2.0, 0, r*2.6); ctx.stroke();
+          // corpo
+          ctx.fillStyle = p.cor;
+          ctx.beginPath(); ctx.ellipse(0, 0, r*0.82, r, 0, 0, Math.PI*2); ctx.fill();
+          // bico
+          ctx.beginPath();
+          ctx.moveTo(-r*0.12, r*0.98); ctx.lineTo(r*0.12, r*0.98); ctx.lineTo(0, r*1.2);
+          ctx.closePath(); ctx.fill();
+          // brilho
+          ctx.globalAlpha = 0.35; ctx.fillStyle = '#FBF7F0';
+          ctx.beginPath(); ctx.ellipse(-r*0.28, -r*0.34, r*0.16, r*0.26, -0.4, 0, Math.PI*2); ctx.fill();
+          ctx.restore();
+        },
+      },
+    };
+
+    const tema = TEMAS[temaId];
+    if(!tema) return;                 // fora das datas e sem override → nada acontece
+
+    api.cor = () => escolher(tema.cores);
+
+    const MAX = 320;                  // teto de partículas (performance)
+    const FIM_FADE = 1300;            // ms de fade antes de remover o canvas
+    let inicio = null, proxSpawn = 0, parouEm = null;
 
     function frame(t){
-      if(inicio === null){ inicio = t; lancar(); lancar(); }
+      if(inicio === null){ inicio = t; if(tema.init) tema.init(api, t); }
       const decorrido = t - inicio;
 
-      // rastro: apaga gradualmente o quadro anterior (mantém o overlay transparente)
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = 'rgba(0,0,0,0.20)';
-      ctx.fillRect(0, 0, W, H);
-      ctx.globalCompositeOperation = 'lighter';
+      // fundo do quadro: rastro (fogos) ou limpeza simples (demais)
+      if(tema.trilha) tema.trilha(ctx, W, H);
+      else ctx.clearRect(0, 0, W, H);
 
-      // lança novos foguetes em cadência
-      if(decorrido < DURACAO && t > proxLanc){
-        lancar();
-        if(Math.random() < 0.5) lancar();
-        proxLanc = t + rand(280, 520);
+      // novos elementos em cadência, enquanto dentro da janela de spawn
+      if(decorrido < tema.duracao && t >= proxSpawn && parts.length < MAX){
+        tema.spawn(api, t);
+        proxSpawn = t + tema.cadencia();
       }
 
-      // foguetes subindo
-      for(let i = foguetes.length-1; i>=0; i--){
-        const f = foguetes[i];
-        f.x += 0;
-        f.y += f.vy;
-        f.vy += GRAV;
-        ctx.beginPath();
-        ctx.fillStyle = f.cor;
-        ctx.arc(f.x, f.y, 2.2*dpr, 0, Math.PI*2);
-        ctx.fill();
-        if(f.vy >= 0 || f.y <= f.alvo){
-          explodir(f.x, f.y, f.cor);
-          foguetes.splice(i, 1);
-        }
-      }
-
-      // faíscas da explosão
-      for(let i = faiscas.length-1; i>=0; i--){
-        const p = faiscas[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.985;
-        p.vy = p.vy*0.985 + GRAV;
-        p.vida -= p.decay;
-        if(p.vida <= 0){ faiscas.splice(i, 1); continue; }
-        ctx.globalAlpha = Math.max(p.vida, 0);
-        ctx.beginPath();
-        ctx.fillStyle = p.cor;
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-        ctx.fill();
+      for(let i = parts.length - 1; i >= 0; i--){
+        const p = parts[i];
+        if(tema.passo(p, api, t) === false){ parts.splice(i, 1); continue; }
+        tema.desenha(p, api, t);
       }
       ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
 
-      // encerramento: parou de lançar e tudo já apagou
-      if(decorrido >= DURACAO && foguetes.length === 0 && faiscas.length === 0){
+      // encerramento: passou a janela e a tela já esvaziou
+      if(decorrido >= tema.duracao && parts.length === 0){
         if(parouEm === null) parouEm = t;
         canvas.style.opacity = '0';
-        if(t - parouEm > 1300){ canvas.remove(); return; }
+        if(t - parouEm > FIM_FADE){ canvas.remove(); return; }
       }
       requestAnimationFrame(frame);
     }
