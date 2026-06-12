@@ -64,6 +64,13 @@
 
   .serif{font-family:'Cormorant Garamond',serif;}
 
+  /* fogos de artifício (overlay ao abrir a página) */
+  #fogos{
+    position:fixed;inset:0;
+    z-index:9998;pointer-events:none;
+    opacity:1;transition:opacity 1.2s ease;
+  }
+
   /* ---------- HERO ---------- */
   .hero{
     position:relative;
@@ -237,6 +244,9 @@
 </style>
 </head>
 <body>
+
+  <!-- fogos de artifício disparados ao abrir a página -->
+  <canvas id="fogos" aria-hidden="true"></canvas>
 
   <!-- ===================== HERO ===================== -->
   <header class="hero">
@@ -475,6 +485,140 @@
       if(Math.abs(dx)>40){ dx<0 ? next() : prev(); reset(); }
       x0=null;
     });
+  })();
+
+  /* ===== fogos de artifício (só em datas comemorativas, dourado & vinho, ~4,5s) ===== */
+  (function(){
+    // datas em que os fogos disparam — formato "mês-dia" (mês base 1)
+    const DATAS_ESPECIAIS = [
+      '2-14',  // 14/fev · Dia dos Namorados (Valentine's)
+      '4-17',  // 17/abr · aniversário de casamento
+      '6-12',  // 12/jun · Dia dos Namorados
+      '6-13',  // 13/jun · aniversário da Cleide
+      '8-24',  // 24/ago · primeiro beijo
+      '9-27',  // 27/set · aniversário do Patrick
+    ];
+    const hoje = new Date();
+    const chaveHoje = (hoje.getMonth() + 1) + '-' + hoje.getDate();
+    if(!DATAS_ESPECIAIS.includes(chaveHoje)) return; // fora das datas, nada de fogos
+
+    // respeita quem prefere menos animação
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const canvas = document.getElementById('fogos');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    let W, H, dpr;
+    function resize(){
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = canvas.width  = Math.floor(innerWidth  * dpr);
+      H = canvas.height = Math.floor(innerHeight * dpr);
+      canvas.style.width  = innerWidth  + 'px';
+      canvas.style.height = innerHeight + 'px';
+    }
+    resize();
+    addEventListener('resize', resize);
+
+    // paleta do site: dourado, dourado-suave, creme/blush + um toque de vinho
+    const CORES = ['#B08D57','#C9A876','#E7D4C4','#D9B26A','#9c3a4d'];
+    const rand = (a,b) => a + Math.random()*(b-a);
+    const cor  = () => CORES[Math.floor(Math.random()*CORES.length)];
+
+    const foguetes  = [];
+    const faiscas   = [];
+    const GRAV = 0.05 * dpr;
+
+    function lancar(){
+      foguetes.push({
+        x: rand(W*0.18, W*0.82),
+        y: H + 10,
+        vy: rand(-13, -10) * dpr,
+        alvo: rand(H*0.12, H*0.45),
+        cor: cor(),
+      });
+    }
+
+    function explodir(x, y, base){
+      const n = Math.floor(rand(50, 80));
+      for(let i=0; i<n; i++){
+        const ang = (Math.PI*2) * (i/n) + rand(-0.04, 0.04);
+        const sp  = rand(1.5, 6) * dpr;
+        faiscas.push({
+          x, y,
+          vx: Math.cos(ang)*sp,
+          vy: Math.sin(ang)*sp,
+          cor: Math.random() < 0.72 ? base : cor(),
+          vida: 1,
+          decay: rand(0.010, 0.020),
+          r: rand(1.3, 2.8) * dpr,
+        });
+      }
+    }
+
+    const DURACAO = 4500;          // quanto tempo segue lançando (ms)
+    let inicio = null, proxLanc = 0, parouEm = null;
+
+    function frame(t){
+      if(inicio === null){ inicio = t; lancar(); lancar(); }
+      const decorrido = t - inicio;
+
+      // rastro: apaga gradualmente o quadro anterior (mantém o overlay transparente)
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'lighter';
+
+      // lança novos foguetes em cadência
+      if(decorrido < DURACAO && t > proxLanc){
+        lancar();
+        if(Math.random() < 0.5) lancar();
+        proxLanc = t + rand(280, 520);
+      }
+
+      // foguetes subindo
+      for(let i = foguetes.length-1; i>=0; i--){
+        const f = foguetes[i];
+        f.x += 0;
+        f.y += f.vy;
+        f.vy += GRAV;
+        ctx.beginPath();
+        ctx.fillStyle = f.cor;
+        ctx.arc(f.x, f.y, 2.2*dpr, 0, Math.PI*2);
+        ctx.fill();
+        if(f.vy >= 0 || f.y <= f.alvo){
+          explodir(f.x, f.y, f.cor);
+          foguetes.splice(i, 1);
+        }
+      }
+
+      // faíscas da explosão
+      for(let i = faiscas.length-1; i>=0; i--){
+        const p = faiscas[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.985;
+        p.vy = p.vy*0.985 + GRAV;
+        p.vida -= p.decay;
+        if(p.vida <= 0){ faiscas.splice(i, 1); continue; }
+        ctx.globalAlpha = Math.max(p.vida, 0);
+        ctx.beginPath();
+        ctx.fillStyle = p.cor;
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // encerramento: parou de lançar e tudo já apagou
+      if(decorrido >= DURACAO && foguetes.length === 0 && faiscas.length === 0){
+        if(parouEm === null) parouEm = t;
+        canvas.style.opacity = '0';
+        if(t - parouEm > 1300){ canvas.remove(); return; }
+      }
+      requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
   })();
 </script>
 </body>
